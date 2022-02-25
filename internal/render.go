@@ -1,8 +1,7 @@
-package main
+package internal
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"github.com/tebeka/selenium"
 	"github.com/tebeka/selenium/chrome"
@@ -10,61 +9,14 @@ import (
 	"image/draw"
 	"image/png"
 	"io/ioutil"
-	"log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-const (
-	// These paths will be different on your system.
-	seleniumPath = ""
-	chromeDriver = ""
-	port         = 5555
-	url          = ""
-)
-
-func main() {
-
-	resolutions := []string{
-		"1920x1080",
-		"3440x1440",
-		"390x844",
-		"1024x600",
-	}
-
-	errch := make(chan error, 1)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var wg sync.WaitGroup
-	wg.Add(len(resolutions))
-
-	for _, res := range resolutions {
-		go func(errch chan<- error, res string) {
-			defer wg.Done()
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				if err := takeFullScreenshot(url, res, res+".png"); err != nil {
-					errch <- err
-					cancel()
-				}
-			}
-		}(errch, res)
-	}
-	wg.Wait()
-	if ctx.Err() != nil {
-		err := <-errch
-		log.Fatal(err)
-	}
-
-}
-
-func takeScreenshot(url, dimensions, outfile string) error {
+func TakeScreenshot(url, dimensions, outFolder string, port int) error {
 	dim := strings.Split(dimensions, "x")
 	width, err := strconv.ParseUint(dim[0], 10, 0)
 	if err != nil {
@@ -74,17 +26,6 @@ func takeScreenshot(url, dimensions, outfile string) error {
 	if err != nil {
 		return err
 	}
-
-	// Start a Selenium WebDriver server instance (if one is not already
-	// running).
-	opts := []selenium.ServiceOption{
-		selenium.ChromeDriver(chromeDriver),
-	}
-	service, err := selenium.NewSeleniumService(seleniumPath, port, opts...)
-	if err != nil {
-		panic(err) // panic is used only as an example and is not otherwise recommended.
-	}
-	defer service.Stop()
 
 	// Connect to the WebDriver instance running locally.
 	caps := selenium.Capabilities{
@@ -111,14 +52,19 @@ func takeScreenshot(url, dimensions, outfile string) error {
 
 	sc, err := wd.Screenshot()
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
-	if err = ioutil.WriteFile(outfile, sc, 666); err != nil {
-		log.Fatal(err)
+	if err := os.MkdirAll(outFolder, 666); err != nil {
+		return err
+	}
+	if err = ioutil.WriteFile(path.Join(outFolder, dimensions+".png"), sc, 666); err != nil {
+		return err
 	}
 	return nil
 }
-func takeFullScreenshot(url, dimensions, outfile string) error {
+
+func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
+	var error error
 
 	heightOnPage := 0
 	dim := strings.Split(dimensions, "x")
@@ -130,17 +76,6 @@ func takeFullScreenshot(url, dimensions, outfile string) error {
 	if err != nil {
 		return err
 	}
-
-	// Start a Selenium WebDriver server instance (if one is not already
-	// running).
-	opts := []selenium.ServiceOption{
-		selenium.ChromeDriver(chromeDriver),
-	}
-	service, err := selenium.NewSeleniumService(seleniumPath, port, opts...)
-	if err != nil {
-		panic(err) // panic is used only as an example and is not otherwise recommended.
-	}
-	defer service.Stop()
 
 	// Connect to the WebDriver instance running locally.
 	caps := selenium.Capabilities{
@@ -156,12 +91,16 @@ func takeFullScreenshot(url, dimensions, outfile string) error {
 	}})
 	wd, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", port))
 	if err != nil {
-		panic(err)
+		return err
 	}
-	defer wd.Quit()
+	defer func() {
+		if err := wd.Quit(); err != nil {
+			error = err
+		}
+	}()
 
 	if err := wd.Get(url); err != nil {
-		panic(err)
+		return err
 	}
 
 	// get maximum document height, to know when to stop scrolling
@@ -184,22 +123,33 @@ func takeFullScreenshot(url, dimensions, outfile string) error {
 			return err
 		}
 		draw.Draw(bgImg, img.Bounds().Add(image.Pt(0, heightOnPage)), img, image.Point{}, draw.Over)
-		wd.KeyDown(selenium.PageDownKey)
-		time.Sleep(5 * time.Second)
+		if err := wd.KeyDown(selenium.PageDownKey); err != nil {
+			return err
+		}
+		if err := wd.KeyUp(selenium.PageDownKey); err != nil {
+			return err
+		}
+		if err := wd.SetImplicitWaitTimeout(5 * time.Second); err != nil {
+			return err
+		}
 
-		heightOnPage += int(height)
 		if heightOnPage >= maxHeight {
 			break
 		}
-
+		heightOnPage += int(height)
 	}
-	f, err := os.Create(outfile)
+	if err := os.MkdirAll(outFolder, 666); err != nil {
+		return err
+	}
+	f, err := os.Create(path.Join(outFolder, dimensions+".png"))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	png.Encode(f, bgImg)
+	if err := png.Encode(f, bgImg); err != nil {
+		return err
+	}
 
-	return nil
+	return error
 }
