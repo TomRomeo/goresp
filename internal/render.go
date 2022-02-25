@@ -122,20 +122,16 @@ func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
 		if err != nil {
 			return err
 		}
-		draw.Draw(bgImg, img.Bounds().Add(image.Pt(0, heightOnPage)), img, image.Point{}, draw.Over)
-		if err := wd.KeyDown(selenium.PageDownKey); err != nil {
-			return err
-		}
-		if err := wd.KeyUp(selenium.PageDownKey); err != nil {
-			return err
-		}
-		if err := wd.SetImplicitWaitTimeout(5 * time.Second); err != nil {
-			return err
-		}
 
 		if heightOnPage >= maxHeight {
+
+			// overwrite some part of the previous image if scrolling a whole screenheight wasn't possible
+			remainingHeight := heightOnPage - maxHeight
+			draw.Draw(bgImg, img.Bounds().Add(image.Pt(0, heightOnPage-int(height)-remainingHeight)), img, image.Point{}, draw.Over)
 			break
 		}
+
+		draw.Draw(bgImg, img.Bounds().Add(image.Pt(0, heightOnPage)), img, image.Point{}, draw.Over)
 		heightOnPage += int(height)
 
 		if i == 0 {
@@ -158,6 +154,10 @@ func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
 				return err
 			}
 
+		}
+
+		if _, err = wd.ExecuteScript(fmt.Sprintf("window.scrollTo(0, %d)", heightOnPage), nil); err != nil {
+			return err
 		}
 	}
 	if err := os.MkdirAll(outFolder, 666); err != nil {
