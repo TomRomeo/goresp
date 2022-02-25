@@ -113,7 +113,7 @@ func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
 	bgImg := image.NewRGBA(image.Rect(0, 0, int(width), maxHeight))
 
 	// scroll and add to image
-	for {
+	for i := 0; ; i++ {
 		partScreensht, err := wd.Screenshot()
 		if err != nil {
 			return err
@@ -137,6 +137,28 @@ func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
 			break
 		}
 		heightOnPage += int(height)
+
+		if i == 0 {
+
+			// delete all fixed items
+			// this is useful for navbars and similar items
+			_, err = wd.ExecuteScript(`
+
+				[].forEach.call(document.querySelectorAll('*'), function(el) {
+					if (window.getComputedStyle(el).position === 'fixed') {
+						el.remove()
+					}
+					});
+		
+			`, nil)
+			if err != nil {
+				return err
+			}
+			if err := wd.SetImplicitWaitTimeout(2 * time.Second); err != nil {
+				return err
+			}
+
+		}
 	}
 	if err := os.MkdirAll(outFolder, 666); err != nil {
 		return err
