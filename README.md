@@ -16,7 +16,7 @@ In your terminal, type:
 go install github.com/TomRomeo/goresp/cmd/goresp
 ```
 
-You can now use the `goresp` command, `try goresp -h`.
+You can now use the `goresp` command, try `goresp -h`.
 
 Before you can start with the action though, you will have to install the correct version of [selenium standalone server](https://selenium-release.storage.googleapis.com/index.html?path=4.0/)
 and the correct version of the [chrome-driver](https://chromedriver.chromium.org/downloads).
