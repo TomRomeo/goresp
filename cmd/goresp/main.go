@@ -1,9 +1,9 @@
 package main
 
 import (
-	"awesomeProject2/internal"
 	"context"
 	"errors"
+	"github.com/TomRomeo/goresp/internal"
 	"github.com/tebeka/selenium"
 	"github.com/urfave/cli/v2"
 	"log"

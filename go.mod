@@ -1,4 +1,4 @@
-module awesomeProject2
+module github.com/TomRomeo/goresp
 
 go 1.17
 
