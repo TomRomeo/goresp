@@ -19,6 +19,7 @@ var (
 	outPath      string
 	res          cli.StringSlice
 	port         = 5555
+	delay        int
 )
 
 func main() {
@@ -67,6 +68,14 @@ func main() {
 				Usage:       "",
 				DefaultText: "",
 				Destination: &res,
+			},
+			&cli.IntFlag{
+				Name:        "delay",
+				Aliases:     []string{"d"},
+				Usage:       "",
+				Value:       0,
+				Destination: &delay,
+				HasBeenSet:  false,
 			},
 		},
 		Action:          mainCommand,
@@ -135,12 +144,12 @@ var mainCommand = func(c *cli.Context) error {
 				return
 			default:
 				if full {
-					if err := internal.TakeFullScreenshot(url, res, outPath, port); err != nil {
+					if err := internal.TakeFullScreenshot(url, res, outPath, delay, port); err != nil {
 						errch <- err
 						cancel()
 					}
 				} else {
-					if err := internal.TakeScreenshot(url, res, outPath, port); err != nil {
+					if err := internal.TakeScreenshot(url, res, outPath, delay, port); err != nil {
 						errch <- err
 						cancel()
 					}

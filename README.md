@@ -40,3 +40,8 @@ goresp -f -o ./output <url>
 ```bash
 goresp -r "1x1" -r "1200x1200" -o ./output <url>
 ```
+
+### If you want to take screenshots after a delay (in seconds)
+```bash
+goresp -d 2 -o ./output <url>
+```

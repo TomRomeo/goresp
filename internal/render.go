@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TakeScreenshot(url, dimensions, outFolder string, port int) error {
+func TakeScreenshot(url, dimensions, outFolder string, delay, port int) error {
 	dim := strings.Split(dimensions, "x")
 	width, err := strconv.ParseUint(dim[0], 10, 0)
 	if err != nil {
@@ -50,6 +50,9 @@ func TakeScreenshot(url, dimensions, outFolder string, port int) error {
 		panic(err)
 	}
 
+	if err := wd.SetImplicitWaitTimeout(time.Duration(delay) * time.Second); err != nil {
+		return err
+	}
 	sc, err := wd.Screenshot()
 	if err != nil {
 		return err
@@ -63,7 +66,7 @@ func TakeScreenshot(url, dimensions, outFolder string, port int) error {
 	return nil
 }
 
-func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
+func TakeFullScreenshot(url, dimensions, outFolder string, delay, port int) error {
 	var error error
 
 	heightOnPage := 0
@@ -100,6 +103,9 @@ func TakeFullScreenshot(url, dimensions, outFolder string, port int) error {
 	}()
 
 	if err := wd.Get(url); err != nil {
+		return err
+	}
+	if err := wd.SetImplicitWaitTimeout(time.Duration(delay) * time.Second); err != nil {
 		return err
 	}
 
